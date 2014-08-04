@@ -4,7 +4,7 @@
  	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -solaris* | -sym* \
  	      | -amigaos* | -amigados* | -msdos* | -newsos* | -unicos* | -aof* \
  	      | -aos* | -aros* \
-+		  | -xomb* \
++		  | -btos* \
  	      | -nindy* | -vxsim* | -vxworks* | -ebmon* | -hms* | -mvs* \
  	      | -clix* | -riscos* | -uniplus* | -iris* | -rtu* | -xenix* \
  	      | -hiux* | -386bsd* | -knetbsd* | -mirbsd* | -netbsd* \
@@ -44,8 +44,8 @@
  	use_collect2=yes
  	gas=yes
  	;;
-+x86_64-*-xomb*)
-+	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h i386/x86-64.h  xomb.h"
++i[3-7]86-*-btos*)
++	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h i386/i386elf.h"
 +	tmake_file="${tmake_file} i386/t-i386elf t-svr4"
 +	use_fixproto=yes
 +	;;
@@ -58,7 +58,7 @@
  	;;
  xscale-*-coff)
  	;;
-+x86_64-*-xomb*)
++i[3-7]86-*-btos*)
 + extra_parts="crtbegin.o crtend.o"
 +	;;
  xstormy16-*-elf)

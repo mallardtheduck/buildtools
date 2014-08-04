@@ -135,6 +135,7 @@ make install || exit
 cd ..
 
 setphase "PASS-2 COMPILE NEWLIB"
+cp ../newlib-files/btos_* newlib-${NEWLIB_VER}/newlib/libc/sys/${OSNAME}/
 cp ../newlib-files/syscalls.c newlib-${NEWLIB_VER}/newlib/libc/sys/${OSNAME}/syscalls.c
 
 cd newlib-obj
