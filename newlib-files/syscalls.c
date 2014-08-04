@@ -1,4 +1,3 @@
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
@@ -7,35 +6,148 @@
 #include <sys/time.h>
 #include <stdio.h>
 
-#include <stdbool.h>
-
 //#include <_ansi.h>
 #include <errno.h>
+#include "btos_stubs.h"
 
-// first, the 13 required calls
+static char stdout_device[255]={'D', 'E', 'V', ':', '/'};
+static bt_filehandle stdout=0;
+
+// --- Process Control ---
+
+int
+_exit(int val){
+  bt_exit(val);
+  return (-1);
+}
+
+int
+execve(char *name, char **argv, char **env) {
+	errno = ENOMEM;
+	return bt_spawn(name, 0, NULL);
+}
+
+/*
+ * getpid -- only one process, so just return 1.
+ */
+int
+getpid()
+{
+  return bt_getpid();
+}
 
 
+int 
+fork(void) {
+	errno = ENOTSUP;
+	return -1;
+}
 
 
 /*
  * kill -- go out via exit...
  */
+int
+kill(pid, sig)
+     int pid;
+     int sig;
+{
+  if(pid == getpid())
+    _exit(sig);
 
 
+  bt_kill(pid);
+  return -1;
+}
+
+int
+wait(int *status) {
+	errno = ECHILD;
+	return -1;
+}
+
+// --- I/O ---
 
 /*
  * isatty -- returns 1 if connected to a terminal device,
  *           returns 0 if not. Since we're hooked up to a
  *           serial port, we'll say yes and return a 1.
  */
+int
+isatty(fd)
+     int fd;
+{
+  return (1);
+}
 
 
-unsigned long long initHeap();
+int
+close(int file) {
+	return -1;
+}
 
+int
+link(char *old, char *new) {
+	errno = EMLINK;
+	return -1;
+}
+
+int
+lseek(int file, int ptr, int dir) {
+	return 0;
+}
+
+int
+open(const char *name, int flags, ...) {
+	return -1;
+}
+
+int
+read(int file, char *ptr, int len) {
+	// XXX: keyboard support
+
+	return 0;
+}
+
+int 
+fstat(int file, struct stat *st) {
+	st->st_mode = S_IFCHR;
+	return 0;
+}
+
+int
+stat(const char *file, struct stat *st){
+	st->st_mode = S_IFCHR;
+	return 0;
+}
+
+int
+unlink(char *name) {
+	errno = ENOENT;
+	return -1;
+}
+
+
+int
+write(int file, char *ptr, int len) {
+	if(file==1){
+		if(!stdout){
+			if(!bt_getenv("DISPLAY_DEVICE", &stdout_device[5], 250)) return;
+			stdout=bt_fopen(stdout_device, 0);
+		}
+		bt_write(stdout, len, ptr);
+	}
+	return -1;
+}
 
 // --- Memory ---
+
+/* _end is set in the linker command file */
+extern caddr_t _end;
+
 #define PAGE_SIZE 4096ULL
 #define PAGE_MASK 0xFFFFFFFFFFFFF000ULL
+#define HEAP_ADDR (((unsigned long long)&_end + PAGE_SIZE) & PAGE_MASK)
 
 /*
  * sbrk -- changes heap size size. Get nbytes more
@@ -44,45 +156,22 @@ unsigned long long initHeap();
  */
 caddr_t
 sbrk(int nbytes){
-  static unsigned long long heap_ptr = 0;
-  caddr_t base;
-
-  int temp;
-
-  if(heap_ptr == 0){
-    heap_ptr = initHeap();
+  static climit=0;
+  static calloced=0;
+  void *cbase=0;
+  caddr_t ret;
+  if(climit - calloced > nbytes){
+	ret=cbase+calloced;
+	calloced+=cbase;
+  }else{
+	unsigned int pages=(nbytes/4096)+1;
+	cbase=bt_alloc(pages);
+	climit=pages*4096;
+	calloced=nbytes;
+	ret=cbase;
   }
 
-  base = (caddr_t)heap_ptr;
-
-	if(nbytes < 0){
-		heap_ptr -= nbytes;
-		return base;
-	}
-
-  if( (heap_ptr & ~PAGE_MASK) != 0ULL){
-    temp = (PAGE_SIZE - (heap_ptr & ~PAGE_MASK));
-
-    if( nbytes < temp ){
-      heap_ptr += nbytes;
-      nbytes = 0;
-    }else{
-      heap_ptr += temp;
-      nbytes -= temp;
-    }
-  }
-
-  while(nbytes > PAGE_SIZE){
-    nbytes -= (int) PAGE_SIZE;
-    heap_ptr = heap_ptr + PAGE_SIZE;
-  }
-
-  if( nbytes > 0){
-    heap_ptr += nbytes;
-  }
-
-
-  return base;
+  return ret;
 }
 
 
@@ -90,27 +179,4 @@ sbrk(int nbytes){
  int gettimeofday(struct timeval *p, void *z){
 	 return -1;
  }
-
-
-static int fail();
-
-int utime(const char *filename, const struct utimbuf *times){
-	// I ain't tellin'
-	errno = EPERM;
-  return -1;
-}
-
-int getdents(unsigned int fd, struct linux_dirent *dirp,
-						 unsigned int count){
-	return fail();
-}
-
-int getrusage(int who, struct rusage *usage){
-	return fail();
-}
-
-/*int fail(){
-	errno = ENOSYS;
-  return -1;
-	}*/
 
